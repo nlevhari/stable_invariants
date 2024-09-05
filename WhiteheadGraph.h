@@ -1,27 +1,22 @@
 #ifndef WHITEHEAD_GRAPH_H
 #define WHITEHEAD_GRAPH_H
 
-#include "CoreWhiteheadGraph.h"
+#include "Graph.h"
 #include <unordered_map>
 
-class WhiteheadGraph : public CoreWhiteheadGraph {
+class WhiteheadGraph : public Graph {
 public:
     WhiteheadGraph(int r);
-    void removeVertex(int vertex);
-    void rememberOriginalVertex(int originalVertex, int newVertex);
-    const std::unordered_map<int, int>& getOriginalVertices() const;
-
-    bool hasMinimumDegree(int minDegree) const;
-    bool isConnected() const;
-    bool isBiconnected() const;
+    WhiteheadGraph(int s, bool not_core);
+    
+    
     bool isValid(const bool partitioned=false) const;
+    // WhiteheadGraph(const CoreWhiteheadGraph& g);
     std::vector<WhiteheadGraph> getConnectedComponents() const;
+    int getR() const {return r;}
 
-private:
-    std::unordered_map<int, int> originalVertices;
-
-    void internalDFS(int vertex, std::unordered_map<int, bool>& visited,
-                     const std::function<void(int)>& processVertex) const;
+protected:
+    int r;
 };
 
 #endif // WHITEHEAD_GRAPH_H

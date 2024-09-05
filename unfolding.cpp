@@ -3,105 +3,156 @@
 #include <list>
 #include <algorithm>
 #include "WhiteheadGraph.h"
+#include "linear_program_construction.h"
+#include "utils.h"
+#include <iostream>
+#include <sstream>
 
-// Helper function to generate all valid partitions
-void generatePartitionsHelper(const std::vector<std::pair<int, int>>& edges,
-                              std::vector<std::vector<std::pair<int, int>>>& currentPartition,
-                              std::vector<std::vector<std::vector<std::pair<int, int>>>>& allPartitions,
-                              int index) {
-    if (index == edges.size()) {
-        allPartitions.push_back(currentPartition);
-        return;
-    }
+namespace VariableConstruction {
+    
+    // Function to filter the valid WhiteheadGraph objects that are visibly irreducible
+    std::vector<WhiteheadGraph> filterValidWhiteheadGraphsFromPartitions(
+        const std::vector<WhiteheadGraph>& graphs) {
 
-    // Try to add the current edge to existing subsets
-    for (auto& subset : currentPartition) {
-        if (subset.size() < edges.size() - 1) { // Ensure size at least 2 later
-            subset.push_back(edges[index]);
-            generatePartitionsHelper(edges, currentPartition, allPartitions, index + 1);
-            subset.pop_back();
+        std::vector<WhiteheadGraph> filteredGraphs;
+
+        for (const auto& graph : graphs) {
+            bool isValid = true; // Initialize bool per graph
+            for (const auto& component : graph.getConnectedComponents()){
+                isValid = isValid && component.isValid(true); // Check if all components are valid
+            }
+            if (isValid) {
+                filteredGraphs.push_back(graph);
+            }
         }
+
+        return filteredGraphs;
     }
 
-    // Try to create a new subset with the current edge
-    if (currentPartition.size() < edges.size() / 2) { // Prevent creating too many single-edge subsets
-        currentPartition.push_back({edges[index]});
-        generatePartitionsHelper(edges, currentPartition, allPartitions, index + 1);
-        currentPartition.pop_back();
-    }
-}
+    std::vector<std::unordered_map<int, std::vector<std::vector<int>>>> generatePartitionCombinations(
+        const std::unordered_map<int, std::vector<int>>& outgoingEdges,
+        const std::unordered_map<int, std::vector<int>>& incomingEdges) {
+        
+        // Vector to store all the partition combinations for each vertex
+        std::vector<std::unordered_map<int, std::vector<std::vector<int>>>> allCombinations;
 
-// Wrapper function to generate all valid partitions
-std::vector<std::vector<std::vector<std::pair<int, int>>>> generatePartitions(const std::list<std::pair<int, int>>& edges) {
-    std::vector<std::vector<std::vector<std::pair<int, int>>>> partitions;
-    std::vector<std::vector<std::pair<int, int>>> currentPartition;
+        // Vector of vertices to iterate over
+        std::vector<int> vertices;
+        for (const auto& [vertex, _] : outgoingEdges) {
+            vertices.push_back(vertex);
+        }
 
-    std::vector<std::pair<int, int>> edgeVec(edges.begin(), edges.end());
-    generatePartitionsHelper(edgeVec, currentPartition, partitions, 0);
-
-    // Filter out partitions with subsets smaller than 2
-    partitions.erase(std::remove_if(partitions.begin(), partitions.end(),
-        [](const std::vector<std::vector<std::pair<int, int>>>& partition) {
-            return std::any_of(partition.begin(), partition.end(), [](const std::vector<std::pair<int, int>>& subset) {
-                return subset.size() < 2;
-            });
-        }), partitions.end());
-
-    return partitions;
-}
-
-// Function to replace vertex i in the subgraph with new vertices corresponding to the edge subsets
-std::vector<WhiteheadGraph> partitionAndReplaceVertices(const WhiteheadGraph& subgraph) {
-    std::vector<WhiteheadGraph> newGraphs;
-
-    // For each vertex in the subgraph, perform the partitioning and create new graphs
-    for (const auto& vertexEdges : subgraph.getEdges()) {
-        int vertex = vertexEdges.first;
-        const std::list<std::pair<int, int>>& edges = vertexEdges.second;
-
-        // Generate partitions of the edges incident to this vertex
-        std::vector<std::vector<std::vector<std::pair<int, int>>>> partitions = generatePartitions(edges);
-
-        for (const auto& partition : partitions) {
-            WhiteheadGraph newGraph = subgraph;
-
-            // Remove the original vertex and its edges
-            newGraph.removeVertex(vertex);
-
-            // Add new vertices for each subset in the partition
-            int newVertexId = vertex * 10; // Assuming this creates a new unique vertex ID
-            for (const auto& edgeSet : partition) {
-                for (const auto& edge : edgeSet) {
-                    newGraph.addEdge(newVertexId, edge.first, edge.second);
+        // Helper function to generate combinations recursively
+        std::function<void(int, std::unordered_map<int, std::vector<std::vector<int>>>&)> generate =
+            [&](int index, std::unordered_map<int, std::vector<std::vector<int>>>& currentCombination) {
+                if (index == vertices.size()) {
+                    // Base case: if we've processed all vertices, add the current combination to the list
+                    allCombinations.push_back(currentCombination);
+                    return;
                 }
-                newVertexId++;
+
+                int vertex = vertices[index];
+                //make sure no position 0 exists
+                std::vector<int> edges_at_vertex = outgoingEdges.at(vertex);
+                std::vector<int> incoming = incomingEdges.at(vertex);
+                for (size_t i=0; i<incoming.size(); i++){
+                    incoming[i] = -incoming[i];
+                }
+                edges_at_vertex.insert(edges_at_vertex.end(), incoming.begin(), incoming.end());
+
+                // Get all possible partitions for outgoing and incoming edges
+                std::vector<std::vector<std::vector<int>>> partitions = Utils::generatePartitions(edges_at_vertex);
+
+                // Iterate over all combinations of outgoing and incoming partitions
+                for (const std::vector<std::vector<int>>& partition : partitions) {
+                    // Store the partition in the current combination
+                    currentCombination[vertex] = partition;
+
+                    // Recur to process the next vertex
+                    generate(index + 1, currentCombination);
+
+                    // Backtrack: remove the partition for the current vertex to explore other combinations
+                    currentCombination.erase(vertex);
+                }
+            };
+
+        // Initialize an empty current combination and start the recursive generation
+        std::unordered_map<int, std::vector<std::vector<int>>> currentCombination;
+        generate(0, currentCombination);
+
+        return allCombinations;
+    }
+
+    std::vector<WhiteheadGraph> partitionAndReplaceVertices(const WhiteheadGraph& originalGraph) {
+        std::vector<WhiteheadGraph> newGraphs;
+
+        // Step 1: Generate partitions for each vertex considering incoming and outgoing edges
+        std::unordered_map<int, std::vector<int>> outgoing_vertex_to_edge_positions;
+        std::unordered_map<int, std::vector<int>> incoming_vertex_to_edge_positions;
+        for (const auto& vertexEdges: originalGraph.getEdges()){
+            for (const std::pair<int,int> incoming_vertex_and_position: vertexEdges.second){
+                outgoing_vertex_to_edge_positions[vertexEdges.first].push_back(incoming_vertex_and_position.second);
+                incoming_vertex_to_edge_positions[incoming_vertex_and_position.first].push_back(incoming_vertex_and_position.second);
+            }
+        }
+
+
+        // Step 2: Iterate over all combinations of partitions (Cartesian product) - vector of maps from vertex to its partition given in edge positions.
+        std::vector<std::unordered_map<int, std::vector<std::vector<int>>>> partitionCombination = generatePartitionCombinations(outgoing_vertex_to_edge_positions, incoming_vertex_to_edge_positions);
+        // int i=0;
+        // for (const auto& partitionChoice : partitionCombination) {
+        //     std::cout<<"partition number "<<i<<"\n";
+        //     int j=0;
+        //     for (const auto& vertexPartition : partitionChoice) {
+        //         std::cout<<"vertex: "<<vertexPartition.first<<", j="<<j<<"\n";
+        //         const auto& subsets = vertexPartition.second;
+        //         int k=0;
+        //         for (const auto& subset : subsets) {
+        //             std::cout<<"subset "<<k<<" positions: \n";
+        //             for (const int position: subset){
+        //                 std::cout<<position<<", ";
+        //             }
+        //             std::cout<<"\n";
+        //             k++;
+        //         }
+        //         j++;
+        //     }
+        //     i++;
+        // }
+
+        // Step 3: Construct new graphs based on each partition combination
+        for (const auto& partitionChoice : partitionCombination) {
+            WhiteheadGraph newGraph(0, true);
+            std::unordered_map<int, int> position_to_new_source;
+            std::unordered_map<int, int> position_to_new_target;
+
+            // Add new vertices and track original vertices
+            int newVertexId = 0;
+            for (const auto& vertexPartition : partitionChoice) {
+                int originalVertex = vertexPartition.first;
+                const auto& subsets = vertexPartition.second;
+                for (const auto& subset : subsets) {
+                    newGraph.addVertex(newVertexId);
+                    newGraph.rememberOriginalVertex(originalVertex, newVertexId);
+                    for (const int position: subset){
+                        assert (position!=0 && "bug - somehow position=0") ;
+                        if (position > 0){
+                            position_to_new_source[position] = newVertexId;
+                        } else{
+                            position_to_new_target[-position] = newVertexId;
+                        }
+                    }
+                    newVertexId++;
+                }
+            }
+            // Add edges to the new graph
+            for (const auto& position_and_source : position_to_new_source) {
+                newGraph.addEdge(position_and_source.second, position_to_new_target.at(position_and_source.first), position_and_source.first);
             }
 
-            // Remember the original vertex
-            newGraph.rememberOriginalVertex(vertex, newVertexId - 1);
-            
             newGraphs.push_back(newGraph);
         }
+
+        return newGraphs;
     }
-
-    return newGraphs;
-}
-
-// Function to filter the valid WhiteheadGraph objects that are visibly irreducible
-std::vector<WhiteheadGraph> filterValidWhiteheadGraphsFromPartitions(
-    const std::vector<WhiteheadGraph>& graphs) {
-
-    std::vector<WhiteheadGraph> filteredGraphs;
-
-    for (const auto& graph : graphs) {
-        bool isValid = true; // Initialize bool per graph
-        for (const auto& component : graph.getConnectedComponents()){
-            isValid = isValid && component.isValid(true); // Check if all components are valid
-        }
-        if (isValid) {
-            filteredGraphs.push_back(graph);
-        }
-    }
-
-    return filteredGraphs;
 }
