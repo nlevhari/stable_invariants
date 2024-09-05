@@ -1,5 +1,5 @@
 #include "WhiteheadGraph.h"
-#include "/Users/nivlevhari/repos/uni/stable_invariants/linear_program_construction.h"
+#include "linear_program_construction.h"
 #include <vector>
 
 namespace EquationConstruction{

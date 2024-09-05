@@ -1,5 +1,6 @@
 #include "WhiteheadGraph.h"
 #include <stack>
+#include <cassert>
 #include <iostream>
 #include <sstream>
 

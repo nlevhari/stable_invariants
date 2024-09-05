@@ -2,7 +2,6 @@
 #define WHITEHEAD_GRAPH_H
 
 #include "Graph.h"
-#include <unordered_map>
 
 class WhiteheadGraph : public Graph {
 public:

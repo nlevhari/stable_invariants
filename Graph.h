@@ -6,6 +6,7 @@
 #include <unordered_set>
 #include <list>
 #include <utility>
+#include <functional>
 
 struct Edge {
     int start;

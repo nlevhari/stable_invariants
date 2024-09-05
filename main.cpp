@@ -53,6 +53,7 @@ int main(int argc, char* argv[]) {
         std::vector<WhiteheadGraph> partitioned = VariableConstruction::partitionAndReplaceVertices(subgraph);
         partitionedGraphs.insert(partitionedGraphs.end(), partitioned.begin(), partitioned.end());
     }
+    std::cout<<"after partitioned, got "<<partitionedGraphs.size()<<" subgraphs:\n";
 
     auto removeCondition = [](const WhiteheadGraph& graph) {
             return !graph.isValid(true);

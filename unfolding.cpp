@@ -5,6 +5,7 @@
 #include "WhiteheadGraph.h"
 #include "linear_program_construction.h"
 #include "utils.h"
+#include <cassert>
 #include <iostream>
 #include <sstream>
 

@@ -3,6 +3,7 @@
 #include <utility>
 #include <iostream>
 #include "Graph.h"
+#include <cassert>
 
 Graph::Graph(const std::vector<int> vertices_) : vertices(vertices_) { }
 
