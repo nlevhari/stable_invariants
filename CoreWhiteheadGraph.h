@@ -12,7 +12,11 @@
 
 class CoreWhiteheadGraph : public WhiteheadGraph {
 public:
-    CoreWhiteheadGraph(int r);
+    CoreWhiteheadGraph(int r_);
+    int getR() const {return r;}
+
+protected:
+    int r;
 };
 
 CoreWhiteheadGraph constructCoreWhiteheadGraph(const std::vector<int>& word, int r);

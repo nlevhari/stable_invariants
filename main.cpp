@@ -55,16 +55,16 @@ int main(int argc, char* argv[]) {
     }
     std::cout<<"after partitioned, got "<<partitionedGraphs.size()<<" subgraphs:\n";
 
-    auto removeCondition = [](const WhiteheadGraph& graph) {
-            return !graph.isValid(true);
-        };
-        auto it = std::remove_if(partitionedGraphs.begin(), partitionedGraphs.end(), removeCondition);
-        partitionedGraphs.erase(it, partitionedGraphs.end());
-    displayWhiteheadGraphs(partitionedGraphs);
+    // auto removeCondition = [](const WhiteheadGraph& graph) {
+    //         return !graph.isValid(true);
+    //     };
+    //     auto it = std::remove_if(partitionedGraphs.begin(), partitionedGraphs.end(), removeCondition);
+    //     partitionedGraphs.erase(it, partitionedGraphs.end());
 
 
     // Step 4: Filter the list of partitioned subgraphs
-    // std::vector<WhiteheadGraph> filteredGraphs = VariableConstruction::filterValidWhiteheadGraphsFromPartitions(partitionedGraphs);
+    std::vector<WhiteheadGraph> filteredGraphs = VariableConstruction::filterValidWhiteheadGraphsFromPartitions(partitionedGraphs);
+    displayWhiteheadGraphs(filteredGraphs);
     std::cout<<"after filtered, got "<<partitionedGraphs.size()<<" subgraphs:\n";
     // displayWhiteheadGraphs(filteredGraphs);
 

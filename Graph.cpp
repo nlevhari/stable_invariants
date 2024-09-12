@@ -1,9 +1,10 @@
 #include <algorithm>
 #include <stack>
 #include <utility>
+#include <limits>
 #include <iostream>
-#include "Graph.h"
 #include <cassert>
+#include "Graph.h"
 
 Graph::Graph(const std::vector<int> vertices_) : vertices(vertices_) { }
 
@@ -128,105 +129,188 @@ bool Graph::hasMinimumDegree(int minDegree) const {
     return true;
 }
 
+// bool Graph::isConnected() const {
+//     if (edges.empty()) return false;
+
+//     std::unordered_set<int> visited;
+//     std::list<int> queue;
+
+//     int startVertex = edges.begin()->first;
+//     queue.push_back(startVertex);
+//     visited.insert(startVertex);
+
+//     while (!queue.empty()) {
+//         int currentVertex = queue.front();
+//         queue.pop_front();
+
+//         for (const auto& edge : edges.at(currentVertex)) {
+//             int neighbor = edge.first;
+//             if (visited.find(neighbor) == visited.end()) {
+//                 visited.insert(neighbor);
+//                 queue.push_back(neighbor);
+//             }
+//         }
+//     }
+
+//     for (const auto& pair : edges) {
+//         if (visited.find(pair.first) == visited.end()) {
+//             return false;
+//         }
+//     }
+//     return true;
+// }
+
+// // Internal DFS utility function
+// void Graph::internalDFS(int vertex, std::unordered_set<int>& visited,
+//                                  const std::function<void(int)>& processVertex) const {
+//     std::stack<int> stack;
+//     stack.push(vertex);
+
+//     while (!stack.empty()) {
+//         int currentVertex = stack.top();
+//         stack.pop();
+
+//         if (visited.find(currentVertex) == visited.end()) {
+//             processVertex(currentVertex);
+
+//             for (const auto& edge : edges.at(currentVertex)) {
+//                 int neighbor = edge.first;
+//                 if (visited.find(neighbor) == visited.end()) {
+//                     stack.push(neighbor);
+//                 }
+//             }
+//         }
+//     }
+// }
+
+// bool Graph::isBiconnected() const {
+//     if (edges.empty()) return true;
+
+//     std::unordered_map<int, int> disc;
+//     std::unordered_map<int, int> low;
+//     std::unordered_set<int> visited;
+//     std::unordered_map<int, int> parentMap;
+//     int time = 0;
+//     bool isBiconnected = true;
+
+//     std::function<void(int)> processVertex = [&](int vertex) {
+//         int children = 0;
+//         visited.insert(vertex);
+//         disc[vertex] = low[vertex] = ++time;
+
+//         for (const auto& edge : edges.at(vertex)) {
+//             int neighbor = edge.first;
+//             if (visited.find(neighbor) == visited.end()) {
+//                 children++;
+//                 parentMap[neighbor] = vertex;
+//                 internalDFS(neighbor, visited, processVertex);
+
+//                 low[vertex] = std::min(low[vertex], low[neighbor]);
+
+//                 if (parentMap[vertex] == -1 && children > 1)
+//                     isBiconnected = false;
+
+//                 if (parentMap[vertex] != -1 && low[neighbor] >= disc[vertex])
+//                     isBiconnected = false;
+//             } else if (neighbor != parentMap[vertex]) {
+//                 low[vertex] = std::min(low[vertex], disc[neighbor]);
+//             }
+//         }
+//     };
+
+//     int startVertex = edges.begin()->first;
+//     internalDFS(startVertex, visited, processVertex);
+
+//     for (const auto& pair : edges) {
+//         if (visited.find(pair.first) == visited.end()) {
+//             isBiconnected = false;
+//             break;
+//         }
+//     }
+
+//     return isBiconnected;
+// }
+
 bool Graph::isConnected() const {
-    if (edges.empty()) return false;
+    if (vertices.empty()) return true; // An empty graph is considered connected
 
-    std::unordered_map<int, bool> visited;
+    std::unordered_set<int> visited;
     std::list<int> queue;
+    int startVertex = vertices.front();
 
-    int startVertex = edges.begin()->first;
+    // Start BFS or DFS from the first vertex
     queue.push_back(startVertex);
-    visited[startVertex] = true;
+    visited.insert(startVertex);
 
     while (!queue.empty()) {
-        int currentVertex = queue.front();
+        int vertex = queue.front();
         queue.pop_front();
 
-        for (const auto& edge : edges.at(currentVertex)) {
+        for (const auto& edge : edges.at(vertex)) {
             int neighbor = edge.first;
-            if (!visited[neighbor]) {
-                visited[neighbor] = true;
+            if (visited.find(neighbor) == visited.end()) {
+                visited.insert(neighbor);
                 queue.push_back(neighbor);
             }
         }
     }
 
-    for (const auto& pair : edges) {
-        if (!visited[pair.first]) {
-            return false;
-        }
-    }
-    return true;
+    // Check if all vertices were visited
+    return visited.size() == vertices.size();
 }
 
-// Internal DFS utility function
 void Graph::internalDFS(int vertex, std::unordered_map<int, bool>& visited,
-                                 const std::function<void(int)>& processVertex) const {
-    std::stack<int> stack;
-    stack.push(vertex);
+                        std::unordered_map<int, int>& disc, std::unordered_map<int, int>& low,
+                        std::unordered_map<int, int>& parentMap, std::unordered_set<int>& articulationPoints,
+                        int& time, bool& isBiconnected) const {
+    int children = 0;
+    visited[vertex] = true;
+    disc[vertex] = low[vertex] = ++time;
 
-    while (!stack.empty()) {
-        int currentVertex = stack.top();
-        stack.pop();
+    for (const auto& edge : edges.at(vertex)) {
+        int neighbor = edge.first;
 
-        if (!visited[currentVertex]) {
-            visited[currentVertex] = true;
-            processVertex(currentVertex);
+        if (!visited[neighbor]) {
+            children++;
+            parentMap[neighbor] = vertex;
+            internalDFS(neighbor, visited, disc, low, parentMap, articulationPoints, time, isBiconnected);
 
-            for (const auto& edge : edges.at(currentVertex)) {
-                int neighbor = edge.first;
-                if (!visited[neighbor]) {
-                    stack.push(neighbor);
-                }
+            low[vertex] = std::min(low[vertex], low[neighbor]);
+
+            if (parentMap[vertex] == -1 && children > 1) {
+                articulationPoints.insert(vertex);
             }
+
+            if (parentMap[vertex] != -1 && low[neighbor] >= disc[vertex]) {
+                articulationPoints.insert(vertex);
+            }
+        } else if (neighbor != parentMap[vertex]) {
+            low[vertex] = std::min(low[vertex], disc[neighbor]);
         }
     }
 }
 
 bool Graph::isBiconnected() const {
-    if (edges.empty()) return true;
+    if (!isConnected()) return false;
 
+    std::unordered_map<int, bool> visited;
     std::unordered_map<int, int> disc;
     std::unordered_map<int, int> low;
-    std::unordered_map<int, bool> visited;
     std::unordered_map<int, int> parentMap;
+    std::unordered_set<int> articulationPoints;
     int time = 0;
     bool isBiconnected = true;
 
-    std::function<void(int)> processVertex = [&](int vertex) {
-        int children = 0;
-        visited[vertex] = true;
-        disc[vertex] = low[vertex] = ++time;
+    for (int vertex : vertices) {
+        visited[vertex] = false;
+        parentMap[vertex] = -1;
+    }
 
-        for (const auto& edge : edges.at(vertex)) {
-            int neighbor = edge.first;
-            if (!visited[neighbor]) {
-                children++;
-                parentMap[neighbor] = vertex;
-                internalDFS(neighbor, visited, processVertex);
-
-                low[vertex] = std::min(low[vertex], low[neighbor]);
-
-                if (parentMap[vertex] == -1 && children > 1)
-                    isBiconnected = false;
-
-                if (parentMap[vertex] != -1 && low[neighbor] >= disc[vertex])
-                    isBiconnected = false;
-            } else if (neighbor != parentMap[vertex]) {
-                low[vertex] = std::min(low[vertex], disc[neighbor]);
-            }
-        }
-    };
-
-    int startVertex = edges.begin()->first;
-    internalDFS(startVertex, visited, processVertex);
-
-    for (const auto& pair : edges) {
-        if (!visited[pair.first]) {
-            isBiconnected = false;
-            break;
+    for (int vertex : vertices) {
+        if (!visited[vertex]) {
+            internalDFS(vertex, visited, disc, low, parentMap, articulationPoints, time, isBiconnected);
         }
     }
 
-    return isBiconnected;
+    return articulationPoints.empty();
 }

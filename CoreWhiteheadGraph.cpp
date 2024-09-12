@@ -2,7 +2,7 @@
 #include "CoreWhiteheadGraph.h"
 #include <iostream>
 
-CoreWhiteheadGraph::CoreWhiteheadGraph(int r) : WhiteheadGraph(r) { }
+CoreWhiteheadGraph::CoreWhiteheadGraph(int r_) : WhiteheadGraph(r_), r(r_) { }
 
 CoreWhiteheadGraph constructCoreWhiteheadGraph(const std::vector<int>& word, int r) {
     CoreWhiteheadGraph graph(r);

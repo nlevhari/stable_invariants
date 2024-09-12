@@ -39,7 +39,9 @@ protected:
     std::unordered_map<int, std::vector<std::pair<int, int> > > edges;
     std::unordered_map<int, int> originalVertices;
     void internalDFS(int vertex, std::unordered_map<int, bool>& visited,
-                     const std::function<void(int)>& processVertex) const;
+                        std::unordered_map<int, int>& disc, std::unordered_map<int, int>& low,
+                        std::unordered_map<int, int>& parentMap, std::unordered_set<int>& articulationPoints,
+                        int& time, bool& isBiconnected) const;
 };
 
 #endif // GRAPH_H

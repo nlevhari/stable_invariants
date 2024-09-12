@@ -1,4 +1,5 @@
 #include "WhiteheadGraph.h"
+#include "Graph.h"
 #include <stack>
 #include <cassert>
 #include <iostream>
@@ -15,6 +16,8 @@ const std::vector<int> generateVerticesFromR(const int r){
 
 WhiteheadGraph::WhiteheadGraph(int r) : Graph(generateVerticesFromR(r)) {}
 
+WhiteheadGraph::WhiteheadGraph(Graph G_) : Graph(G_) {}
+
 const std::vector<int> generate_s_vertices(const int s){
     std::vector<int> vertices;
     for (int i = 0; i < s; ++i) {
@@ -27,40 +30,50 @@ WhiteheadGraph::WhiteheadGraph(int s, bool not_core) : Graph(generate_s_vertices
     assert(not_core && "bad instantiation for WHG"); // if not_core=false, bad instantiation.
 }
 
+WhiteheadGraph::WhiteheadGraph(const std::vector<int> vertices_) : Graph(vertices_) { }
+
 std::vector<WhiteheadGraph> WhiteheadGraph::getConnectedComponents() const {
-    std::unordered_map<int, bool> visited;
+    std::unordered_set<int> visited;
     std::vector<WhiteheadGraph> components;
-    int r = this->getOriginalVertices().size() / 2;
 
     auto processVertexForComponents = [&](int vertex) {
-        WhiteheadGraph component(r);
+        std::unordered_map<int, std::pair<int, int>> edges_for_component;
         std::list<int> queue;
         queue.push_back(vertex);
+        visited.insert(vertex);
 
         while (!queue.empty()) {
             int currentVertex = queue.front();
             queue.pop_front();
 
-            if (!visited[currentVertex]) {
-                visited[currentVertex] = true;
-
-                // Add vertex to component
-                for (const auto& edge : edges.at(currentVertex)) {
-                    int neighbor = edge.first;
-                    component.addEdge(currentVertex, neighbor, edge.second);
-                    if (!visited[neighbor]) {
-                        queue.push_back(neighbor);
-                    }
+            for (const auto& edge : edges.at(currentVertex)) {
+                int neighbor = edge.first;
+                if (visited.find(neighbor) == visited.end()) {
+                    visited.insert(neighbor);
+                    queue.push_back(neighbor);
                 }
+                edges_for_component.insert({currentVertex, edge});
             }
         }
-        components.push_back(component);
+
+        std::vector<int> componentVertices;
+        for (const auto& edge : edges_for_component) {
+            if (std::find(componentVertices.begin(), componentVertices.end(), edge.first) == componentVertices.end()) {
+                componentVertices.push_back(edge.first);
+            }
+        }
+
+        WhiteheadGraph componentGraph(componentVertices);
+        for (const auto& edge : edges_for_component) {
+            componentGraph.addEdge(edge.first, edge.second.first, edge.second.second);
+        }
+
+        components.push_back(componentGraph);
     };
 
-    for (const auto& pair : edges) {
-        int vertex = pair.first;
-        if (!visited[vertex]) {
-            internalDFS(vertex, visited, processVertexForComponents);
+    for (int vertex : vertices) {
+        if (visited.find(vertex) == visited.end()) {
+            processVertexForComponents(vertex);
         }
     }
 
@@ -68,10 +81,76 @@ std::vector<WhiteheadGraph> WhiteheadGraph::getConnectedComponents() const {
 }
 
 
+// std::vector<WhiteheadGraph> WhiteheadGraph::getConnectedComponents() const {
+//     std::unordered_set<int> visited;
+//     std::vector<WhiteheadGraph> components;
+
+//     auto processVertexForComponents = [&](int vertex) {
+//         std::unordered_map<int, std::unordered_map<int, int>> edges_for_component;
+//         std::list<int> queue;
+//         queue.push_back(vertex);
+
+//         while (!queue.empty()) {
+//             int currentVertex = queue.front();
+//             queue.pop_front();
+
+//             if (visited.find(currentVertex) == visited.end()) {
+//                 visited.insert(currentVertex);
+
+//                 for (const auto& edge : edges.at(currentVertex)) {
+//                     int neighbor = edge.first;
+//                     int position = edge.second;
+//                     edges_for_component[currentVertex][neighbor] = position;
+
+//                     if (visited.find(neighbor) == visited.end()) {
+//                         queue.push_back(neighbor);
+//                     }
+//                 }
+//             }
+//         }
+
+//         std::unordered_set<int> vertices_for_component;
+//         for (const auto& edgeMap : edges_for_component) {
+//             vertices_for_component.insert(edgeMap.first);
+//             for (const auto& edge : edgeMap.second) {
+//                 vertices_for_component.insert(edge.first);
+//             }
+//         }
+//         if (vertices_for_component.size() == 0){
+//             return;
+//         }
+//         auto component = WhiteheadGraph(std::vector<int>(vertices_for_component.begin(), vertices_for_component.end()));
+//         for (const auto& edgeMap : edges_for_component) {
+//             int from = edgeMap.first;
+//             for (const auto& edge : edgeMap.second) {
+//                 int to = edge.first;
+//                 int position = edge.second;
+//                 component.addEdge(from, to, position);
+//             }
+//         }
+//         components.push_back(component);
+//     };
+
+//     for (const auto& pair : edges) {
+//         int vertex = pair.first;
+//         if (visited.find(vertex) == visited.end()) {
+//             internalDFS(vertex, visited, processVertexForComponents);
+//         }
+//     }
+
+//     return components;
+// }
+
+
+
 
 bool WhiteheadGraph::isValid(const bool partitioned) const {
-    return getEdges().size() >= 2 &&
-            hasMinimumDegree(2) &&
-            isConnected() &&
-            (!partitioned || isBiconnected());
+    const bool enough_edges = getEdges().size() >= 2;
+    if (!enough_edges) return false;
+    const bool at_least_deg_2 = hasMinimumDegree(2);
+    if (!at_least_deg_2) return false;
+    const bool connected = isConnected();
+    if (!connected) return false;
+    const bool not_partition_or_biconnected = !partitioned || isBiconnected();
+    return not_partition_or_biconnected;
 }
