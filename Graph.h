@@ -18,7 +18,7 @@ class Graph {
 public:
     Graph(const std::vector<int> vertices_);
 
-    void addEdge(int start, int end, int position);
+    virtual void addEdge(int start, int end, int position);
     std::vector<Edge> getAllEdges() const;
     const std::vector<int> getVertices() const { return vertices; }
     void retainVertices(const std::unordered_set<int>& activeVertices);
@@ -26,13 +26,16 @@ public:
     const std::unordered_map<int, std::pair<int, int>> getEdgesByPosition() const;
     void displayGraph() const;
     std::vector<std::pair<int, int>> getIncomingEdges(int vertex) const;
-    void removeVertex(int vertex);
+    const std::pair<std::vector<int>, std::vector<int>> getNeighborVecsAtVertex(int vertex) const; //incoming_vec, outgoing_vec
+    const std::vector<int> getNeighborsAtVertex(int vertex) const;
     void addVertex(int vertex);
     const std::unordered_map<int, int>& getOriginalVertices() const;
     void rememberOriginalVertex(int originalVertex, int newVertex);
     bool hasMinimumDegree(int minDegree) const;
     bool isConnected() const;
     bool isBiconnected() const;
+    bool isValidWHGraph(const bool partitioned) const;
+    std::vector<Graph> getConnectedComponents() const;
 
 protected:
     std::vector<int> vertices;

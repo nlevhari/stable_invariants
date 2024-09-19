@@ -42,10 +42,10 @@ int main(int argc, char* argv[]) {
     std::vector<int> word = parseWordInput(argc, argv);
 
     // Step 1: Create the CoreWhiteheadGraph from the word
-    CoreWhiteheadGraph coreGraph = constructCoreWhiteheadGraph(word, r);
+    CoreWhiteheadGraph coreWHGraph = constructCoreWhiteheadGraph(word, r);
 
     // Step 2: Generate subgraphs with minimum degree of at least 2
-    std::vector<WhiteheadGraph> validSubgraphs = VariableConstruction::findValidSubgraphsFromCore(coreGraph);
+    std::vector<WhiteheadGraph> validSubgraphs = VariableConstruction::findValidSubgraphsFromCore(coreWHGraph);
     std::cout<<"after valid, got "<<validSubgraphs.size()<<" subgraphs:\n";
     // Step 3: Create a new list of subgraphs by partitioning and replacing vertices
     std::vector<WhiteheadGraph> partitionedGraphs;
@@ -55,17 +55,10 @@ int main(int argc, char* argv[]) {
     }
     std::cout<<"after partitioned, got "<<partitionedGraphs.size()<<" subgraphs:\n";
 
-    // auto removeCondition = [](const WhiteheadGraph& graph) {
-    //         return !graph.isValid(true);
-    //     };
-    //     auto it = std::remove_if(partitionedGraphs.begin(), partitionedGraphs.end(), removeCondition);
-    //     partitionedGraphs.erase(it, partitionedGraphs.end());
-
-
     // Step 4: Filter the list of partitioned subgraphs
     std::vector<WhiteheadGraph> filteredGraphs = VariableConstruction::filterValidWhiteheadGraphsFromPartitions(partitionedGraphs);
-    displayWhiteheadGraphs(filteredGraphs);
-    std::cout<<"after filtered, got "<<partitionedGraphs.size()<<" subgraphs:\n";
+    // displayWhiteheadGraphs(filteredGraphs);
+    std::cout<<"after filtered, got "<<filteredGraphs.size()<<" subgraphs:\n";
     // displayWhiteheadGraphs(filteredGraphs);
 
     // Step 5: Find graphs that contain an edge from the first letter of the original word

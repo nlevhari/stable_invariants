@@ -10,10 +10,7 @@ public:
     WhiteheadGraph(int s, bool not_core);
     WhiteheadGraph(std::vector<int> vertices);
     WhiteheadGraph(Graph G_);
-        
-    bool isValid(const bool partitioned=false) const;
-    // WhiteheadGraph(const CoreWhiteheadGraph& g);
-    std::vector<WhiteheadGraph> getConnectedComponents() const;
+    void addEdge(int start, int end, int position) override;
 
 };
 

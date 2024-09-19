@@ -58,9 +58,9 @@ namespace VariableConstruction {
         // For each subset, build the subgraph and check its minimum vertex degree
         for (const std::vector<Edge>& subset : subsets) {
             WhiteheadGraph subgraph = buildSubgraph(graph, subset);
-            std::cout<<"trying graph: \n";
-            subgraph.displayGraph();
-            if (!subset.empty() && subgraph.isValid(false)) {
+            // std::cout<<"trying graph: \n";
+            // subgraph.displayGraph();
+            if (!subset.empty() && subgraph.isValidWHGraph(false)) {
                 validSubgraphs.push_back(subgraph);
             }
         }
