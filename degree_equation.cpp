@@ -14,7 +14,7 @@ namespace EquationConstruction{
             // Iterate over all edges in the current WhiteheadGraph
             for (const auto& edgeList : graph.getEdges()) {
                 for (const auto& edge : edgeList.second) {
-                    if (edge.second == 0) { // Check if the edge originated from the first letter (position index 0)
+                    if (edge.second == 1) { // Check if the edge originated from the first letter (position index 0)
                         result.push_back(static_cast<int>(i));
                         break; // Stop searching further in this graph
                     }
