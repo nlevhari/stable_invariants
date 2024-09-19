@@ -237,25 +237,36 @@ bool Graph::isValidWHGraph(const bool partitioned) const {
     return not_partition_or_biconnected;
 }
 
+struct PairHash {
+    template <typename T1, typename T2>
+    std::size_t operator()(const std::pair<T1, T2>& p) const {
+        auto hash1 = std::hash<T1>{}(p.first);
+        auto hash2 = std::hash<T2>{}(p.second);
+        return hash1 ^ (hash2 << 1); // Shift and combine
+    }
+};
+
 std::vector<Graph> Graph::getConnectedComponents() const {
     std::unordered_set<int> visited;
     std::vector<Graph> components;
 
     auto processVertexForComponents = [&](int vertex) {
-        std::vector<std::pair<int, int>> edges_for_component;
+        std::unordered_set<std::pair<int, int>, PairHash> edges_for_component;
+        std::vector<int> componentVertices;
         std::list<int> queue;
         queue.push_back(vertex);
         visited.insert(vertex);
         while (!queue.empty()) {
             int currentVertex = queue.front();
+            componentVertices.push_back(currentVertex);
             queue.pop_front();
             const auto& incoming_outgoing = getNeighborVecsAtVertex(currentVertex);
             auto processNeighbor = [&] (int neighbor, bool incoming){
-                if (visited.find(neighbor) == visited.end()) {
-                    visited.insert(neighbor);
+                if (visited.find(neighbor) == visited.end()) { 
                     queue.push_back(neighbor);
-                    edges_for_component.push_back(incoming ? std::make_pair(neighbor, currentVertex) : std::make_pair(currentVertex, neighbor));
+                    visited.insert(neighbor);
                 }
+                edges_for_component.insert(incoming ? std::make_pair(neighbor, currentVertex) : std::make_pair(currentVertex, neighbor));
             };
             for (const auto& nbr: incoming_outgoing.first){
                 processNeighbor(nbr, true);
@@ -265,13 +276,7 @@ std::vector<Graph> Graph::getConnectedComponents() const {
             }
         }
 
-        std::unordered_set<int> componentVertices;
-        for (const auto& edge : edges_for_component) {
-            componentVertices.insert(edge.first);
-            componentVertices.insert(edge.second);
-        }
-
-        Graph componentGraph(std::vector<int>(componentVertices.begin(), componentVertices.end()));
+        Graph componentGraph(componentVertices);
         for (const auto& edge : edges_for_component) {
             componentGraph.addEdge(edge.first, edge.second, 0); // 0 is a fake position
         }
