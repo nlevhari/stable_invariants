@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "WhiteheadGraph.h"
 #include "linear_program_construction.h"
+#include "stable_invariants_types.h"
 #include "utils.h"
 #include <cassert>
 #include <iostream>
@@ -12,15 +13,14 @@
 namespace VariableConstruction {
     
     // Function to filter the valid WhiteheadGraph objects that are visibly irreducible
-    std::vector<WhiteheadGraph> filterValidWhiteheadGraphsFromPartitions(
-        const std::vector<WhiteheadGraph>& graphs) {
+    std::vector<WhiteheadGraph> filterValidWhiteheadGraphsFromPartitions(const std::vector<WhiteheadGraph>& graphs, StableInvariant& invariant) {
 
         std::vector<WhiteheadGraph> filteredGraphs;
 
         for (const auto& graph : graphs) {
             bool isValid = true; // Initialize bool per graph
             for (const auto& component : graph.getConnectedComponents()){
-                isValid = isValid && component.isValidWHGraph(true); // Check if all components are valid
+                isValid = isValid && invariant.isValidWHGraphForInvariant(component);
             }
             if (isValid) {
                 filteredGraphs.push_back(graph);
@@ -48,9 +48,10 @@ namespace VariableConstruction {
                 }
 
                 int vertex = vertices[index];
-                //make sure no position 0 exists
-                std::vector<int> edges_at_vertex = outgoingEdges.at(vertex);
-                std::vector<int> incoming = incomingEdges.at(vertex);
+                auto it = outgoingEdges.find(vertex);
+                std::vector<int> edges_at_vertex = (it != outgoingEdges.end()) ? it->second: std::vector<int>();
+                it = incomingEdges.find(vertex);
+                std::vector<int> incoming = (it != incomingEdges.end()) ? it->second: std::vector<int>();
                 for (size_t i=0; i<incoming.size(); i++){
                     incoming[i] = -incoming[i];
                 }
@@ -123,17 +124,20 @@ namespace VariableConstruction {
                 }
             }
             if (partition_invalid) { continue; } else {
-                for (const auto& vertexPartition : partitionChoice) {
-                    std::cout<<"partition for vertex: "<<vertexPartition.first<<"\n subsets: \n";
-                    const auto& subsets = vertexPartition.second;
-                    int i=0;
-                    for (const auto& subset : subsets) {
-                        i++;
-                        std::cout<<"subset "<<i<<": "<<"\n";
-                        for (const int position: subset){
-                            std::cout<<position<<",\t";
+                const bool verbose = false;
+                if (verbose) {
+                    for (const auto& vertexPartition : partitionChoice) {
+                        std::cout<<"partition for vertex: "<<vertexPartition.first<<"\n subsets: \n";
+                        const auto& subsets = vertexPartition.second;
+                        int i=0;
+                        for (const auto& subset : subsets) {
+                            i++;
+                            std::cout<<"subset "<<i<<": "<<"\n";
+                            for (const int position: subset){
+                                std::cout<<position<<",\t";
+                            }
+                            std::cout<<"\n";
                         }
-                        std::cout<<"\n";
                     }
                 }
 

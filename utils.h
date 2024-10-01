@@ -1,3 +1,6 @@
+#ifndef UTILS_H
+#define UTILS_H
+
 #include <vector>
 #include <iostream>
 
@@ -38,3 +41,5 @@ namespace Utils{
         return partitions;
     }
 }
+
+#endif

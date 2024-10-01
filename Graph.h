@@ -34,10 +34,12 @@ public:
     bool hasMinimumDegree(int minDegree) const;
     bool isConnected() const;
     bool isBiconnected() const;
-    bool isValidWHGraph(const bool partitioned) const;
     std::vector<Graph> getConnectedComponents() const;
+    void printAdjacencyMatrix() const;
+    Graph getInducedSubgraph(const std::vector<int>& subsetVertices) const;
 
 protected:
+    int num_edges = 0;
     std::vector<int> vertices;
     std::unordered_map<int, std::vector<std::pair<int, int> > > edges;
     std::unordered_map<int, int> originalVertices;

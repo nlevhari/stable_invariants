@@ -12,13 +12,16 @@ namespace EquationConstruction{
             const auto& graph = graphs[i];
 
             // Iterate over all edges in the current WhiteheadGraph
+            bool found_graph = false;
             for (const auto& edgeList : graph.getEdges()) {
                 for (const auto& edge : edgeList.second) {
                     if (edge.second == 1) { // Check if the edge originated from the first letter (position index 0)
                         result.push_back(static_cast<int>(i));
+                        found_graph = true;
                         break; // Stop searching further in this graph
                     }
                 }
+                if (found_graph) break;
             }
         }
 

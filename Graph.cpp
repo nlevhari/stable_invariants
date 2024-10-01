@@ -4,12 +4,20 @@
 #include <limits>
 #include <iostream>
 #include <cassert>
+#include <iostream>
+#include <iomanip> // For std::setw
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
+
 #include "Graph.h"
 
-Graph::Graph(const std::vector<int> vertices_) : vertices(vertices_) { }
+Graph::Graph(const std::vector<int> vertices_) : vertices(vertices_) { for (auto vertex: vertices) { originalVertices[vertex] = vertex; } }
 
 void Graph::addEdge(int start, int end, int position){
     edges[start].push_back(std::make_pair(end, position));
+    num_edges++;
 }
 
 std::vector<Edge> Graph::getAllEdges() const {
@@ -135,6 +143,33 @@ const std::pair<std::vector<int>, std::vector<int>> Graph::getNeighborVecsAtVert
     return neighbors_pair; 
 }
 
+Graph Graph::getInducedSubgraph(const std::vector<int>& subsetVertices) const {
+    std::unordered_set<int> vertexSet(subsetVertices.begin(), subsetVertices.end());
+    Graph subgraph(subsetVertices);
+
+    for (int vertex : subsetVertices) {
+        if (edges.find(vertex) != edges.end()) {
+            for (const auto& edge : edges.at(vertex)) {
+                int neighbor = edge.first;
+                int position = edge.second;
+                if (vertexSet.find(neighbor) != vertexSet.end()) {
+                    subgraph.addEdge(vertex, neighbor, position);
+                }
+            }
+        }
+    }
+
+    // Preserve original vertices information
+    for (int vertex : subsetVertices) {
+        auto it = originalVertices.find(vertex);
+        if (it != originalVertices.end()) {
+            subgraph.rememberOriginalVertex(it->second, vertex);
+        }
+    }
+
+    return subgraph;
+}
+
 bool Graph::isConnected() const {
     if (vertices.empty()) return true; // An empty graph is considered connected
 
@@ -226,17 +261,6 @@ bool Graph::isBiconnected() const {
     return articulationPoints.empty();
 }
 
-bool Graph::isValidWHGraph(const bool partitioned) const {
-    const bool enough_edges = getEdges().size() >= 2;
-    if (!enough_edges) return false;
-    const bool at_least_deg_2 = hasMinimumDegree(2);
-    if (!at_least_deg_2) return false;
-    const bool connected = isConnected();
-    if (!connected) return false;
-    const bool not_partition_or_biconnected = !partitioned || isBiconnected();
-    return not_partition_or_biconnected;
-}
-
 struct PairHash {
     template <typename T1, typename T2>
     std::size_t operator()(const std::pair<T1, T2>& p) const {
@@ -251,7 +275,6 @@ std::vector<Graph> Graph::getConnectedComponents() const {
     std::vector<Graph> components;
 
     auto processVertexForComponents = [&](int vertex) {
-        std::unordered_set<std::pair<int, int>, PairHash> edges_for_component;
         std::vector<int> componentVertices;
         std::list<int> queue;
         queue.push_back(vertex);
@@ -266,7 +289,6 @@ std::vector<Graph> Graph::getConnectedComponents() const {
                     queue.push_back(neighbor);
                     visited.insert(neighbor);
                 }
-                edges_for_component.insert(incoming ? std::make_pair(neighbor, currentVertex) : std::make_pair(currentVertex, neighbor));
             };
             for (const auto& nbr: incoming_outgoing.first){
                 processNeighbor(nbr, true);
@@ -275,12 +297,8 @@ std::vector<Graph> Graph::getConnectedComponents() const {
                 processNeighbor(nbr, false);
             }
         }
-
-        Graph componentGraph(componentVertices);
-        for (const auto& edge : edges_for_component) {
-            componentGraph.addEdge(edge.first, edge.second, 0); // 0 is a fake position
-        }
-
+        
+        Graph componentGraph = getInducedSubgraph(componentVertices);
         components.push_back(componentGraph);
     };
 
@@ -291,4 +309,116 @@ std::vector<Graph> Graph::getConnectedComponents() const {
     }
 
     return components;
+}
+
+// std::vector<Graph> Graph::getConnectedComponents() const {
+//     std::unordered_set<int> visited;
+//     std::vector<Graph> components;
+
+//     auto processVertexForComponents = [&](int vertex) {
+//         std::unordered_set<std::pair<int, int>, PairHash> edges_for_component;
+//         std::vector<int> componentVertices;
+//         std::list<int> queue;
+//         queue.push_back(vertex);
+//         visited.insert(vertex);
+//         while (!queue.empty()) {
+//             int currentVertex = queue.front();
+//             componentVertices.push_back(currentVertex);
+//             queue.pop_front();
+//             const auto& incoming_outgoing = getNeighborVecsAtVertex(currentVertex);
+//             auto processNeighbor = [&] (int neighbor, bool incoming){
+//                 if (visited.find(neighbor) == visited.end()) { 
+//                     queue.push_back(neighbor);
+//                     visited.insert(neighbor);
+//                 }
+//                 edges_for_component.insert(incoming ? std::make_pair(neighbor, currentVertex) : std::make_pair(currentVertex, neighbor));
+//             };
+//             for (const auto& nbr: incoming_outgoing.first){
+//                 processNeighbor(nbr, true);
+//             }
+//             for (const auto& nbr: incoming_outgoing.second){
+//                 processNeighbor(nbr, false);
+//             }
+//         }
+
+//         Graph componentGraph(componentVertices);
+//         for (const auto& edge : edges_for_component) {
+//             componentGraph.addEdge(edge.first, edge.second, 0); // 0 is a fake position
+//         }
+
+//         components.push_back(componentGraph);
+//     };
+
+//     for (int vertex : vertices) {
+//         if (visited.find(vertex) == visited.end()) {
+//             processVertexForComponents(vertex);
+//         }
+//     }
+
+//     return components;
+// }
+
+void Graph::printAdjacencyMatrix() const {
+    // Create a mapping for new vertices to their original vertices
+    std::unordered_map<int, int> vertexMapping;
+    std::unordered_map<int, std::string> vertexStringMapping;
+    std::unordered_map<int, int> originalVertexCount;
+    std::unordered_set<int> seenOriginalVertices;
+
+    // Fill the mappings for new vertices to original vertices with unique identifiers
+    for (const auto& vertex : vertices) {
+        int originalVertex = originalVertices.at(vertex);
+        
+        // Create unique label for each vertex appearance
+        int label = originalVertexCount[originalVertex]++; // Increment count for that original vertex
+        vertexMapping[vertex] = label; // Map new vertex to its unique label
+        vertexStringMapping[vertex] = std::to_string(originalVertex) + "," + std::to_string(label);
+    }
+
+    int size = vertices.size();
+    // Initialize the adjacency matrix with multiplicity
+    std::vector<std::vector<int>> adjMatrix(size, std::vector<int>(size, 0));
+
+    // Fill the adjacency matrix considering edge multiplicity
+    for (const auto& edge : getAllEdges()) {
+        // Get indices based on unique identifiers
+        int startIndex = std::distance(vertexStringMapping.begin(), vertexStringMapping.find(edge.start));
+        int endIndex = std::distance(vertexStringMapping.begin(), vertexStringMapping.find(edge.end));
+
+        adjMatrix[startIndex][endIndex] += 1; // Increment count for the edge
+        adjMatrix[endIndex][startIndex] += 1; // Increment for undirected representation
+    }
+
+    // Prepare to print the adjacency matrix
+    std::cout << "Adjacency Matrix (Undirected with Multiplicity):\n";
+    std::cout << std::setw(4) << " "; // Space for the top-left corner
+    std::cout << "|"; // Vertical line on the left
+
+    // Print the unique labels of original vertices as column headers
+    for (const auto& vertex : vertices) {
+        std::cout << std::setw(6) << vertexStringMapping[vertex]; // Print unique labels
+    }
+    std::cout << '\n';
+
+    // Print a line under the vertex indices
+    std::cout << std::setw(4) << " "; // Space for the top-left corner
+    std::cout << "|"; // Vertical line on the left
+    for (int i = 0; i < size; ++i) {
+        std::cout << "------"; // Underline for each vertex index
+    }
+    std::cout << " "; // Additional space for the vertical line
+    std::cout << '\n';
+
+    // Print the adjacency matrix rows
+    for (int i = 0; i < size; ++i) {
+        // Print the row header with unique label
+        std::cout << std::setw(4) << vertexStringMapping[vertices[i]]; // Get the mapping for current vertex
+        std::cout << "|"; // Vertical line to the left of the matrix row
+
+        for (int j = 0; j < size; ++j) {
+            std::cout << std::setw(6) << adjMatrix[i][j]; // Print matrix values
+        }
+
+        std::cout << '\n'; // End the row
+    }
 }

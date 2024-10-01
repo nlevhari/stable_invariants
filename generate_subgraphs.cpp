@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <unordered_set>
 #include "WhiteheadGraph.h"
+#include "stable_invariants_types.h"
 #include "linear_program_construction.h"
 #include <iostream>
 #include <sstream>
@@ -48,7 +49,7 @@ namespace VariableConstruction {
     }
 
     // Main function to find all subgraphs with minimum vertex degree 2
-    std::vector<WhiteheadGraph> findValidSubgraphsFromCore(const CoreWhiteheadGraph& graph) {
+    std::vector<WhiteheadGraph> findValidSubgraphsFromCore(const CoreWhiteheadGraph& graph, StableInvariant& invariant) {
         std::vector<WhiteheadGraph> validSubgraphs;
 
         // Generate all subsets of the edge set
@@ -57,10 +58,11 @@ namespace VariableConstruction {
 
         // For each subset, build the subgraph and check its minimum vertex degree
         for (const std::vector<Edge>& subset : subsets) {
-            WhiteheadGraph subgraph = buildSubgraph(graph, subset);
+            const WhiteheadGraph subgraph = buildSubgraph(graph, subset);
             // std::cout<<"trying graph: \n";
             // subgraph.displayGraph();
-            if (!subset.empty() && subgraph.isValidWHGraph(false)) {
+            const Graph& subgraph_graph = subgraph;
+            if (!subset.empty() && invariant.isValidWHGraphForInvariant(subgraph_graph)) {
                 validSubgraphs.push_back(subgraph);
             }
         }
