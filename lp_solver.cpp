@@ -3,6 +3,73 @@
 #include <glpk.h>
 #include "linear_program_construction.h"
 
+
+#include <glpk.h>
+#include <vector>
+#include <iostream>
+
+void print_glp_matrix(glp_prob *lp, int numVars, int numConstraints) {
+    std::vector<std::vector<double>> A(numConstraints, std::vector<double>(numVars, 0.0));
+    std::vector<double> b(numConstraints);
+    std::vector<double> c(numVars);
+
+    // Get the coefficient matrix A
+    for (int i = 1; i <= numConstraints; ++i) {
+        int len = glp_get_mat_row(lp, i, nullptr, nullptr);
+        std::vector<int> indices(len + 1); // Store indices of non-zero entries
+        std::vector<double> values(len + 1); // Store non-zero values
+        glp_get_mat_row(lp, i, indices.data(), values.data());
+
+        for (int j = 1; j <= len; ++j) {
+            A[i - 1][indices[j] - 1] = values[j]; // Fill the matrix A
+        }
+
+        // Get the right-hand side vector b
+        int row_type = glp_get_row_type(lp, i);
+        if (row_type == GLP_FX) {
+            // Fixed constraint (equality): lb == ub
+            b[i - 1] = glp_get_row_lb(lp, i);
+        } else if (row_type == GLP_UP) {
+            // Upper bound constraint
+            b[i - 1] = glp_get_row_ub(lp, i);
+        } else if (row_type == GLP_LO) {
+            // Lower bound constraint
+            b[i - 1] = glp_get_row_lb(lp, i);
+        } else if (row_type == GLP_DB) {
+            // Double bounded constraint
+            b[i - 1] = glp_get_row_ub(lp, i); // Or use lb based on your interpretation
+        } else {
+            std::cerr << "Unknown row type for constraint " << i << std::endl;
+        }
+    }
+
+    // Get the objective function coefficients (vector c)
+    for (int i = 1; i <= numVars; ++i) {
+        c[i - 1] = glp_get_obj_coef(lp, i);
+    }
+
+    // Output the matrix A
+    std::cout << "Matrix A:" << std::endl;
+    for (const auto& row : A) {
+        for (double value : row) {
+            std::cout << value << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    // Output the RHS vector b
+    std::cout << "Vector b:" << std::endl;
+    for (double value : b) {
+        std::cout << value << std::endl;
+    }
+
+    // Output the objective coefficients vector c
+    std::cout << "Vector c (Objective function coefficients):" << std::endl;
+    for (double value : c) {
+        std::cout << value << std::endl;
+    }
+}
+
 // Function to remove intersection elements from both vectors
 void remove_intersection_from_both(std::vector<int>& v1, std::vector<int>& v2) {
     // Step 1: Create a lambda to remove elements from a vector based on the other vector
@@ -51,7 +118,7 @@ std::pair<double, std::vector<double>> getLinearProgramSolutionAndMinimizer(std:
         ar.insert(ar.end(), pos.size(), 1.0);
         ar.insert(ar.end(), neg.size(), -1.0);
         rhs.push_back(0.0);
-        ia.insert(ia.end(), pos.size()+neg.size(), i + 1);
+        ia.insert(ia.end(), pos.size()+neg.size(), constraints_used);
         ja.insert(ja.end(), pos.begin(), pos.end());
         ja.insert(ja.end(), neg.begin(), neg.end());
     }
@@ -82,17 +149,26 @@ std::pair<double, std::vector<double>> getLinearProgramSolutionAndMinimizer(std:
     // Load the matrix into GLPK
     glp_load_matrix(lp, ia.size() - 1, ia.data(), ja.data(), ar.data());
 
-    // Solve the linear program
-    glp_simplex(lp, nullptr);
+    glp_term_out(GLP_OFF);
 
+    // Solve the linear program
+    int status = glp_simplex(lp, nullptr);
+    int solution_status = glp_get_status(lp);
+
+    
     // Output results
-    const double obj_value = glp_get_obj_val(lp);
-    std::cout << "Objective value: " << obj_value << std::endl;
     std::vector<double> solution;
-    const bool verbose = false;
-    for (int i = 1; i <= numVars; ++i) {
-        solution.push_back(glp_get_col_prim(lp, i));
-        if (verbose) std::cout << "Graph x" << i << " coefficient: " << solution[i-1] << std::endl;
+    double obj_value;
+    if (status == 0 && solution_status == GLP_OPT){
+        obj_value = glp_get_obj_val(lp);
+        const bool verbose = false;
+        if (verbose) std::cout << "Objective value: " << obj_value << std::endl;
+        for (int i = 1; i <= numVars; ++i) {
+            solution.push_back(glp_get_col_prim(lp, i));
+            if (verbose) std::cout << "Graph x" << i << " coefficient: " << solution[i-1] << std::endl;
+        }
+    } else {
+        obj_value = -1;
     }
 
     // Cleanup

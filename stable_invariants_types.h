@@ -1,6 +1,6 @@
 #ifndef stable_invariants_types_h
 #define stable_invariants_types_h
-
+#include <cassert>
 #include "Graph.h"
 
 class StableInvariant {

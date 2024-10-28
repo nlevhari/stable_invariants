@@ -89,7 +89,6 @@ namespace EquationConstruction{
             if (it != gluingRestrictions.end()) {
                 opposite_value = it->second;
             }
-            else { std::cout<<"BOO1"<<std::endl;}
 
             std::vector<int> value_vec(value.begin(), value.end());
 
