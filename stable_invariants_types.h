@@ -13,7 +13,7 @@ public:
 
 protected:
     virtual bool isValidWHGraph(const Graph& g) const {
-        const bool enough_edges = g.getEdges().size() >= 2;
+        const bool enough_edges = g.getAllEdges().size() >= 2;
         if (!enough_edges) return false;
         const bool at_least_deg_2 = g.hasMinimumDegree(2);
         if (!at_least_deg_2) return false;

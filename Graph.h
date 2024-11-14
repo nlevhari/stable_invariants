@@ -37,6 +37,7 @@ public:
     std::vector<Graph> getConnectedComponents() const;
     void printAdjacencyMatrix() const;
     Graph getInducedSubgraph(const std::vector<int>& subsetVertices) const;
+    void removeIsolatedVertices();
 
 protected:
     int num_edges = 0;

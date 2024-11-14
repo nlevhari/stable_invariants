@@ -422,3 +422,29 @@ void Graph::printAdjacencyMatrix() const {
         std::cout << '\n'; // End the row
     }
 }
+
+void Graph::removeIsolatedVertices() {
+    // Set to store vertices that are connected via any edge
+    std::unordered_set<int> connectedVertices;
+    
+    // Identify all connected vertices
+    for(const auto& [vertex, adj] : edges){
+        if(!adj.empty()){
+            connectedVertices.insert(vertex);
+            for(const auto& [neighbor, pos] : adj){
+                connectedVertices.insert(neighbor);
+            }
+        }
+    }
+    
+    // Collect non-isolated vertices
+    std::vector<int> nonIsolatedVertices;
+    for(const auto& vertex : vertices){
+        if(connectedVertices.find(vertex) != connectedVertices.end()){
+            nonIsolatedVertices.push_back(vertex);
+        }
+    }
+    
+    // Update the vertices list
+    vertices = nonIsolatedVertices;
+}
